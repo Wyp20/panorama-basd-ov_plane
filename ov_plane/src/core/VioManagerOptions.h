@@ -240,8 +240,8 @@ struct VioManagerOptions {
         }
 
         // Distortion model
-        std::string dist_model = "radtan";
-        parser->parse_external("relative_config_imucam", "cam" + std::to_string(i), "distortion_model", dist_model);
+        std::string dist_model_str;
+        parser->parse_external("relative_config_imucam", "cam" + std::to_string(i), "distortion_model", dist_model_str,true);
 
         // Distortion parameters
         std::vector<double> cam_calib1 = {1, 1, 0, 0};
@@ -273,13 +273,20 @@ struct VioManagerOptions {
         cam_eigen.block(4, 0, 3, 1) = -T_CtoI.block(0, 0, 3, 3).transpose() * T_CtoI.block(0, 3, 3, 1);
 
         // Create intrinsics model
-        if (dist_model == "equidistant") {
+        if (dist_model_str == "equidistant") {
           camera_intrinsics.insert({i, std::make_shared<ov_core::CamEqui>(matrix_wh.at(0), matrix_wh.at(1))});
-          camera_intrinsics.at(i)->set_value(cam_calib);
-        } else {
+        } else if (dist_model_str == "radtan") {
           camera_intrinsics.insert({i, std::make_shared<ov_core::CamRadtan>(matrix_wh.at(0), matrix_wh.at(1))});
-          camera_intrinsics.at(i)->set_value(cam_calib);
+        } else if (dist_model_str == "equirectangle") {
+          camera_intrinsics.insert({i, std::make_shared<ov_core::CamPano>(matrix_wh.at(0), matrix_wh.at(1))});
+        } else {
+          printf(RED "VioManager(): invalid distortion model specified:\n" RESET);
+          printf(RED "\t- EQUADISTANT\n" RESET);
+          printf(RED "\t- PLUMB_BOB\n" RESET);
+          printf(RED "\t- EQUIRECTANGLAR\n" RESET);
+          std::exit(EXIT_FAILURE);
         }
+        camera_intrinsics.at(i)->set_value(cam_calib);
         camera_extrinsics.insert({i, cam_eigen});
       }
       parser->parse_config("use_mask", use_mask);

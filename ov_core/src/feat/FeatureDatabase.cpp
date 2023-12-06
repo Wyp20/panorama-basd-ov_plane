@@ -56,7 +56,7 @@ bool FeatureDatabase::get_feature_clone(size_t id, Feature &feat) {
   return true;
 }
 
-void FeatureDatabase::update_feature(size_t id, double timestamp, size_t cam_id, float u, float v, float u_n, float v_n) {
+void FeatureDatabase::update_feature(size_t id, double timestamp, size_t cam_id, float u, float v, float u_n, float v_n, float z_n) {
 
   // Find this feature using the ID lookup
   std::lock_guard<std::mutex> lck(mtx);
@@ -65,7 +65,7 @@ void FeatureDatabase::update_feature(size_t id, double timestamp, size_t cam_id,
     std::shared_ptr<Feature> feat = features_idlookup.at(id);
     // Append this new information to it!
     feat->uvs[cam_id].push_back(Eigen::Vector2f(u, v));
-    feat->uvs_norm[cam_id].push_back(Eigen::Vector2f(u_n, v_n));
+    feat->uvs_norm[cam_id].push_back(Eigen::Vector3f(u_n, v_n,z_n));
     feat->timestamps[cam_id].push_back(timestamp);
     return;
   }
@@ -77,7 +77,7 @@ void FeatureDatabase::update_feature(size_t id, double timestamp, size_t cam_id,
   std::shared_ptr<Feature> feat = std::make_shared<Feature>();
   feat->featid = id;
   feat->uvs[cam_id].push_back(Eigen::Vector2f(u, v));
-  feat->uvs_norm[cam_id].push_back(Eigen::Vector2f(u_n, v_n));
+  feat->uvs_norm[cam_id].push_back(Eigen::Vector3f(u_n, v_n,z_n));
   feat->timestamps[cam_id].push_back(timestamp);
 
   // Append this new feature into our database

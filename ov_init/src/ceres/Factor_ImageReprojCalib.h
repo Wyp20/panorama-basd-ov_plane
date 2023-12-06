@@ -1,8 +1,8 @@
 /*
  * OpenVINS: An Open Platform for Visual-Inertial Research
- * Copyright (C) 2018-2023 Patrick Geneva
- * Copyright (C) 2018-2023 Guoquan Huang
- * Copyright (C) 2018-2023 OpenVINS Contributors
+ * Copyright (C) 2018-2022 Patrick Geneva
+ * Copyright (C) 2018-2022 Guoquan Huang
+ * Copyright (C) 2018-2022 OpenVINS Contributors
  * Copyright (C) 2018-2019 Kevin Eckenhoff
  *
  * This program is free software: you can redistribute it and/or modify
@@ -48,7 +48,7 @@ public:
   Eigen::Matrix<double, 2, 2> sqrtQ;
 
   // If distortion model is fisheye or radtan
-  bool is_fisheye = false;
+  std::shared_ptr<ov_core::CamBase> cam_used;
 
   // If value of 1 then this residual adds to the problem, otherwise if zero it is "gated"
   double gate = 1.0;
@@ -59,7 +59,7 @@ public:
    * @param pix_sigma_ Raw pixel measurement uncertainty (typically 1)
    * @param is_fisheye_ If this raw pixel camera uses fisheye distortion
    */
-  Factor_ImageReprojCalib(const Eigen::Vector2d &uv_meas_, double pix_sigma_, bool is_fisheye_);
+  Factor_ImageReprojCalib(const Eigen::Vector2d &uv_meas_, double pix_sigma_, std::shared_ptr<ov_core::CamBase> cam_used_);
 
   virtual ~Factor_ImageReprojCalib() {}
 

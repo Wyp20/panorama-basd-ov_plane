@@ -310,7 +310,7 @@ bool PlaneFitting::optimize_plane(std::vector<std::shared_ptr<ov_core::Feature>>
       }
 
       // Camera intrinsics
-      bool is_fisheye = false;
+      std::shared_ptr<ov_core::CamBase> cam_use = nullptr;
       if (map_calib_cam.find(cam_id) == map_calib_cam.end()) {
         auto *var_calib_cam = new double[8];
         var_calib_cam[0] = 1.0;
@@ -362,7 +362,7 @@ bool PlaneFitting::optimize_plane(std::vector<std::shared_ptr<ov_core::Feature>>
         factor_params.push_back(ceres_vars_calib_cam2imu_ori.at(map_calib_cam2imu.at(cam_id)));
         factor_params.push_back(ceres_vars_calib_cam2imu_pos.at(map_calib_cam2imu.at(cam_id)));
         factor_params.push_back(ceres_vars_calib_cam_intrinsics.at(map_calib_cam.at(cam_id)));
-        auto *factor_pinhole = new ov_init::Factor_ImageReprojCalib(uv_norm, sigma_px_norm, is_fisheye);
+        auto *factor_pinhole = new ov_init::Factor_ImageReprojCalib(uv_norm, sigma_px_norm, cam_use);
         // ceres::LossFunction *loss_function = nullptr;
         ceres::LossFunction *loss_function = new ceres::CauchyLoss(1.0);
         problem.AddResidualBlock(factor_pinhole, loss_function, factor_params);

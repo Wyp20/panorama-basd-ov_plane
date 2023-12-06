@@ -263,7 +263,15 @@ int main(int argc, char **argv) {
       // Pass our data into our visualizer callbacks!
       // PRINT_DEBUG("processing cam = %.3f sec\n", msgs.at(m).getTime().toSec() - time_init.toSec());
       if (params.state_options.num_cameras == 1) {
-        viz->callback_monocular(msgs.at(camid_to_msg_index.at(0)).instantiate<sensor_msgs::Image>(), 0);
+        auto msg = msgs.at(m);
+        sensor_msgs::CompressedImage::ConstPtr img_c = msg.instantiate<sensor_msgs::CompressedImage>();
+        if (img_c != nullptr) {
+          cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(img_c, sensor_msgs::image_encodings::BGR8);
+          sensor_msgs::ImagePtr img_i = cv_ptr->toImageMsg();
+          img_i->header = img_c->header;
+          viz->callback_monocular(img_i, 0);
+        } else
+          viz->callback_monocular(msg.instantiate<sensor_msgs::Image>(), 0);
       } else if (params.state_options.num_cameras == 2) {
         auto msg0 = msgs.at(camid_to_msg_index.at(0));
         auto msg1 = msgs.at(camid_to_msg_index.at(1));

@@ -150,8 +150,8 @@ void TrackDescriptor::feed_monocular(const CameraData &message, size_t msg_id) {
 
   // Update our feature database, with theses new observations
   for (size_t i = 0; i < good_left.size(); i++) {
-    cv::Point2f npt_l = camera_calib.at(cam_id)->undistort_cv(good_left.at(i).pt);
-    database->update_feature(good_ids_left.at(i), message.timestamp, cam_id, good_left.at(i).pt.x, good_left.at(i).pt.y, npt_l.x, npt_l.y);
+    cv::Point3f npt_l = camera_calib.at(cam_id)->undistort_cv(good_left.at(i).pt);
+    database->update_feature(good_ids_left.at(i), message.timestamp, cam_id, good_left.at(i).pt.x, good_left.at(i).pt.y, npt_l.x, npt_l.y,npt_l.z);
   }
 
   // Debug info
@@ -314,13 +314,13 @@ void TrackDescriptor::feed_stereo(const CameraData &message, size_t msg_id_left,
     // Assert that our IDs are the same
     assert(good_ids_left.at(i) == good_ids_right.at(i));
     // Try to undistort the point
-    cv::Point2f npt_l = camera_calib.at(cam_id_left)->undistort_cv(good_left.at(i).pt);
-    cv::Point2f npt_r = camera_calib.at(cam_id_right)->undistort_cv(good_right.at(i).pt);
+    cv::Point3f npt_l = camera_calib.at(cam_id_left)->undistort_cv(good_left.at(i).pt);
+    cv::Point3f npt_r = camera_calib.at(cam_id_right)->undistort_cv(good_right.at(i).pt);
     // Append to the database
     database->update_feature(good_ids_left.at(i), message.timestamp, cam_id_left, good_left.at(i).pt.x, good_left.at(i).pt.y, npt_l.x,
-                             npt_l.y);
+                             npt_l.y,npt_l.z);
     database->update_feature(good_ids_left.at(i), message.timestamp, cam_id_right, good_right.at(i).pt.x, good_right.at(i).pt.y, npt_r.x,
-                             npt_r.y);
+                             npt_r.y,npt_r.z);
   }
 
   // Debug info
@@ -512,7 +512,7 @@ void TrackDescriptor::robust_match(const std::vector<cv::KeyPoint> &pts0, const 
 
   // Normalize these points, so we can then do ransac
   // We don't want to do ransac on distorted image uvs since the mapping is nonlinear
-  std::vector<cv::Point2f> pts0_n, pts1_n;
+  std::vector<cv::Point3f> pts0_n, pts1_n;
   for (size_t i = 0; i < pts0_rsc.size(); i++) {
     pts0_n.push_back(camera_calib.at(id0)->undistort_cv(pts0_rsc.at(i)));
     pts1_n.push_back(camera_calib.at(id1)->undistort_cv(pts1_rsc.at(i)));

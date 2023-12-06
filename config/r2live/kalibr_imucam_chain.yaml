@@ -1,0 +1,16 @@
+%YAML:1.0 # need to specify the file type at the top!
+
+cam0:
+  T_imu_cam:
+    - [ 0.00113207, -0.015868800,  0.99987300, 0.03056]
+    - [-0.99999990, -0.000486594,  0.00113994, 0.06429]
+    - [-0.00113994, -0.999874000, -0.01586820,-0.00865]
+    - [0.0, 0.0, 0.0, 1.0]
+  cam_overlaps: [1]
+  camera_model: pinhole
+  distortion_coeffs: [0, 0, 0, 0]
+  distortion_model: radtan
+  intrinsics: [433.9275, 434.0748, 320.0464, 260.4712]
+  resolution: [640, 512]
+  rostopic: /camera/image_color
+  timeshift_cam_imu: 0.034

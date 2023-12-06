@@ -174,8 +174,8 @@ void TrackKLT::feed_monocular(const CameraData &message, size_t msg_id) {
 
   // Update our feature database, with theses new observations
   for (size_t i = 0; i < good_left.size(); i++) {
-    cv::Point2f npt_l = camera_calib.at(cam_id)->undistort_cv(good_left.at(i).pt);
-    database->update_feature(good_ids_left.at(i), message.timestamp, cam_id, good_left.at(i).pt.x, good_left.at(i).pt.y, npt_l.x, npt_l.y);
+    cv::Point3f npt_l = camera_calib.at(cam_id)->undistort_cv(good_left.at(i).pt);
+    database->update_feature(good_ids_left.at(i), message.timestamp, cam_id, good_left.at(i).pt.x, good_left.at(i).pt.y, npt_l.x, npt_l.y,npt_l.z);
   }
 
   // Move forward in time
@@ -355,14 +355,14 @@ void TrackKLT::feed_stereo(const CameraData &message, size_t msg_id_left, size_t
 
   // Update our feature database, with theses new observations
   for (size_t i = 0; i < good_left.size(); i++) {
-    cv::Point2f npt_l = camera_calib.at(cam_id_left)->undistort_cv(good_left.at(i).pt);
+    cv::Point3f npt_l = camera_calib.at(cam_id_left)->undistort_cv(good_left.at(i).pt);
     database->update_feature(good_ids_left.at(i), message.timestamp, cam_id_left, good_left.at(i).pt.x, good_left.at(i).pt.y, npt_l.x,
-                             npt_l.y);
+                             npt_l.y,npt_l.z);
   }
   for (size_t i = 0; i < good_right.size(); i++) {
-    cv::Point2f npt_r = camera_calib.at(cam_id_right)->undistort_cv(good_right.at(i).pt);
+    cv::Point3f npt_r = camera_calib.at(cam_id_right)->undistort_cv(good_right.at(i).pt);
     database->update_feature(good_ids_right.at(i), message.timestamp, cam_id_right, good_right.at(i).pt.x, good_right.at(i).pt.y, npt_r.x,
-                             npt_r.y);
+                             npt_r.y,npt_r.z);
   }
 
   // Move forward in time
@@ -858,7 +858,7 @@ void TrackKLT::perform_matching(const std::vector<cv::Mat> &img0pyr, const std::
 
   // Normalize these points, so we can then do ransac
   // We don't want to do ransac on distorted image uvs since the mapping is nonlinear
-  std::vector<cv::Point2f> pts0_n, pts1_n;
+  std::vector<cv::Point3f> pts0_n, pts1_n;
   for (size_t i = 0; i < pts0.size(); i++) {
     pts0_n.push_back(camera_calib.at(id0)->undistort_cv(pts0.at(i)));
     pts1_n.push_back(camera_calib.at(id1)->undistort_cv(pts1.at(i)));

@@ -140,7 +140,7 @@ void UpdaterSLAM::delayed_init(std::shared_ptr<State> state, std::vector<std::sh
     // Gauss-newton refine the feature
     bool success_refine = true;
     if (initializer_feat->config().refine_features) {
-      success_refine = initializer_feat->single_gaussnewton(*it1, clones_cam);
+      success_refine = initializer_feat->single_gaussnewton_xyz(*it1, clones_cam);
     }
     features_p_FinG_original.insert({(*it1)->featid, (*it1)->p_FinG}); // TODO: handle anchored...
 

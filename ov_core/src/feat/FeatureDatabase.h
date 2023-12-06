@@ -88,7 +88,7 @@ public:
    * This will update a given feature based on the passed ID it has.
    * It will create a new feature, if it is an ID that we have not seen before.
    */
-  void update_feature(size_t id, double timestamp, size_t cam_id, float u, float v, float u_n, float v_n);
+  void update_feature(size_t id, double timestamp, size_t cam_id, float u, float v, float u_n, float v_n, float z_n);
 
   /**
    * @brief Get features that do not have newer measurement then the specified time.

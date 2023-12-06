@@ -477,13 +477,9 @@ std::vector<std::pair<size_t, Eigen::VectorXf>> Simulator::project_pointcloud(co
     if (p_FinC(2) > params.sim_max_feature_gen_distance || p_FinC(2) < 0.1)
       continue;
 
-    // Project to normalized coordinates
-    Eigen::Vector2f uv_norm;
-    uv_norm << (float)(p_FinC(0) / p_FinC(2)), (float)(p_FinC(1) / p_FinC(2));
-
     // Distort the normalized coordinates
     Eigen::Vector2f uv_dist;
-    uv_dist = camera->distort_f(uv_norm);
+    uv_dist = camera->distort_f(p_FinC.cast<float>());
 
     // Check that it is inside our bounds
     if (uv_dist(0) < 0 || uv_dist(0) > camera->w() || uv_dist(1) < 0 || uv_dist(1) > camera->h()) {
@@ -528,10 +524,8 @@ void Simulator::generate_points(const Eigen::Matrix3d &R_GtoI, const Eigen::Vect
     Eigen::Vector3d p_FinC = R_ItoC * p_FinI + p_IinC;
     if (p_FinC(2) > params.sim_max_feature_gen_distance || p_FinC(2) < 0.1)
       continue;
-    Eigen::Vector2f uv_norm;
-    uv_norm << (float)(p_FinC(0) / p_FinC(2)), (float)(p_FinC(1) / p_FinC(2));
     Eigen::Vector2f uv_dist;
-    uv_dist = camera->distort_f(uv_norm);
+    uv_dist = camera->distort_f(p_FinC.cast<float>());
     if (uv_dist(0) < 0 || uv_dist(0) > camera->w() || uv_dist(1) < 0 || uv_dist(1) > camera->h()) {
       continue;
     }
@@ -563,10 +557,10 @@ void Simulator::generate_points(const Eigen::Matrix3d &R_GtoI, const Eigen::Vect
     cv::Point2f uv_dist((float)u_dist, (float)v_dist);
 
     // Undistort this point to our normalized coordinates
-    cv::Point2f uv_norm;
+    cv::Point3f uv_norm;
     uv_norm = camera->undistort_cv(uv_dist);
     Eigen::Vector3d bearing;
-    bearing << uv_norm.x, uv_norm.y, 1;
+    bearing << uv_norm.x, uv_norm.y, uv_norm.z;
 
     // Generate a random depth
     int id_plane = -1;

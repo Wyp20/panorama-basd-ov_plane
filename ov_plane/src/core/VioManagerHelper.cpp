@@ -280,9 +280,9 @@ void VioManager::retriangulate_active_tracks(const ov_core::CameraData &message)
       }
 
       // Get the UV coordinate normal
-      cv::Point2f pt_n = state->_cam_intrinsics_cameras.at(cam_id)->undistort_cv(pt_d);
+      cv::Point3f pt_n = state->_cam_intrinsics_cameras.at(cam_id)->undistort_cv(pt_d);
       Eigen::Matrix<double, 3, 1> b_i;
-      b_i << pt_n.x, pt_n.y, 1;
+      b_i << pt_n.x, pt_n.y, pt_n.z;
       b_i = R_GtoCi.transpose() * b_i;
       b_i = b_i / b_i.norm();
       Eigen::Matrix3d Bperp = skew_x(b_i);
@@ -318,8 +318,8 @@ void VioManager::retriangulate_active_tracks(const ov_core::CameraData &message)
 
         // If we have a bad condition number, or it is too close
         // Then set the flag for bad (i.e. set z-axis to nan)
-        if (std::abs(condA) <= params.featinit_options.max_cond_number && p_FinCi(2, 0) >= params.featinit_options.min_dist &&
-            p_FinCi(2, 0) <= params.featinit_options.max_dist && !std::isnan(p_FinCi.norm())) {
+        if (std::abs(condA) <= params.featinit_options.max_cond_number && p_FinCi.norm() >= params.featinit_options.min_dist &&
+            p_FinCi.norm() <= params.featinit_options.max_dist && !std::isnan(p_FinCi.norm())) {
           active_tracks_posinG_new[featid] = p_FinG;
         }
       }
@@ -380,19 +380,12 @@ void VioManager::retriangulate_active_tracks(const ov_core::CameraData &message)
     // Project SLAM feature and non-cam0 features into the current frame of reference
     Eigen::Vector3d p_FinIi = R_GtoIi * (feat.second - p_IiinG);
     Eigen::Vector3d p_FinCi = R_ItoC * p_FinIi + p_IinC;
-    double depth = p_FinCi(2);
+    double depth = p_FinCi.norm();
     Eigen::Vector2d uv_dist;
     if (feat_uvs_in_cam0.find(feat.first) != feat_uvs_in_cam0.end()) {
       uv_dist << (double)feat_uvs_in_cam0.at(feat.first).x, (double)feat_uvs_in_cam0.at(feat.first).y;
     } else {
-      Eigen::Vector2d uv_norm;
-      uv_norm << p_FinCi(0) / depth, p_FinCi(1) / depth;
-      uv_dist = state->_cam_intrinsics_cameras.at(0)->distort_d(uv_norm);
-    }
-
-    // Skip if not valid (i.e. negative depth, or outside of image)
-    if (depth < 0.1) {
-      continue;
+      uv_dist = state->_cam_intrinsics_cameras.at(0)->distort_d(p_FinCi);
     }
 
     // Skip if not valid (i.e. negative depth, or outside of image)

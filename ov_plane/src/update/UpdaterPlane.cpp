@@ -151,7 +151,7 @@ void UpdaterPlane::init_vio_plane(std::shared_ptr<State> state, std::vector<std:
     // Gauss-newton refine the feature
     bool success_refine = true;
     if (initializer_feat->config().refine_features) {
-      success_refine = initializer_feat->single_gaussnewton(*it1, clones_cam);
+      success_refine = initializer_feat->single_gaussnewton_xyz(*it1, clones_cam);
     }
 
     // Remove the feature if not a success
@@ -200,19 +200,19 @@ void UpdaterPlane::init_vio_plane(std::shared_ptr<State> state, std::vector<std:
   // SLAM: append features if they lie on a plane!
   // TODO: if we do this, the whole system seems to be a lot worst
   // TODO: how can we see if the SLAM feature is an inlier or not????
-  //  for (auto &feat : state->_features_SLAM) {
-  //    if (feat2plane.find(feat.first) == feat2plane.end())
-  //      continue;
-  //    size_t planeid = feat2plane.at(feat.first);
-  //    if (state->_features_PLANE.find(planeid) != state->_features_PLANE.end())
-  //      continue;
-  //    plane_feat_count[planeid]++;
-  //    auto featptr = std::make_shared<Feature>();
-  //    featptr->featid = feat.second->_featid;
-  //    featptr->p_FinG = feat.second->get_xyz(false);
-  //    assert(feat.second->_feat_representation == LandmarkRepresentation::Representation::GLOBAL_3D);
-  //    plane_feats[planeid].push_back(featptr);
-  //  }
+   for (auto &feat : state->_features_SLAM) {
+     if (feat2plane.find(feat.first) == feat2plane.end())
+       continue;
+     size_t planeid = feat2plane.at(feat.first);
+     if (state->_features_PLANE.find(planeid) != state->_features_PLANE.end())
+       continue;
+     plane_feat_count[planeid]++;
+     auto featptr = std::make_shared<Feature>();
+     featptr->featid = feat.second->_featid;
+     featptr->p_FinG = feat.second->get_xyz(false);
+     assert(feat.second->_feat_representation == LandmarkRepresentation::Representation::GLOBAL_3D);
+     plane_feats[planeid].push_back(featptr);
+   }
 
   // Debug print out stats
   for (auto const &planect : plane_feat_count) {

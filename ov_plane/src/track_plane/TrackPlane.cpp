@@ -552,8 +552,8 @@ void TrackPlane::feed_monocular(const CameraData &message, size_t msg_id) {
 
   // Update our feature database, with theses new observations
   for (size_t i = 0; i < good_left.size(); i++) {
-    cv::Point2f npt_l = camera_calib.at(cam_id)->undistort_cv(good_left.at(i).pt);
-    database->update_feature(good_ids_left.at(i), message.timestamp, cam_id, good_left.at(i).pt.x, good_left.at(i).pt.y, npt_l.x, npt_l.y);
+    cv::Point3f npt_l = camera_calib.at(cam_id)->undistort_cv(good_left.at(i).pt);
+    database->update_feature(good_ids_left.at(i), message.timestamp, cam_id, good_left.at(i).pt.x, good_left.at(i).pt.y, npt_l.x, npt_l.y,npt_l.z);
   }
 
   // Move forward in time
@@ -632,9 +632,9 @@ void TrackPlane::perform_plane_detection_monocular(size_t cam_id) {
   for (size_t i = 0; i < pts_left.size(); i++) {
 
     // Get the UV coordinate normal
-    cv::Point2f pt_n = camera_calib.at(cam_id)->undistort_cv(pts_left.at(i).pt);
+    cv::Point3f pt_n = camera_calib.at(cam_id)->undistort_cv(pts_left.at(i).pt);
     Eigen::Matrix<double, 3, 1> b_i;
-    b_i << pt_n.x, pt_n.y, 1;
+    b_i << pt_n.x, pt_n.y, pt_n.z;
     b_i = R_GtoCi.transpose() * b_i;
     b_i = b_i / b_i.norm();
     Eigen::Matrix3d Bperp = skew_x(b_i);
@@ -1330,7 +1330,7 @@ void TrackPlane::perform_matching(const std::vector<cv::Mat> &img0pyr, const std
 
   // Normalize these points, so we can then do ransac
   // We don't want to do ransac on distorted image uvs since the mapping is nonlinear
-  std::vector<cv::Point2f> pts0_n, pts1_n;
+  std::vector<cv::Point3f> pts0_n, pts1_n;
   for (size_t i = 0; i < pts0.size(); i++) {
     pts0_n.push_back(camera_calib.at(id0)->undistort_cv(pts0.at(i)));
     pts1_n.push_back(camera_calib.at(id1)->undistort_cv(pts1.at(i)));

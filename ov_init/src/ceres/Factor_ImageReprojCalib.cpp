@@ -1,8 +1,8 @@
 /*
  * OpenVINS: An Open Platform for Visual-Inertial Research
- * Copyright (C) 2018-2023 Patrick Geneva
- * Copyright (C) 2018-2023 Guoquan Huang
- * Copyright (C) 2018-2023 OpenVINS Contributors
+ * Copyright (C) 2018-2022 Patrick Geneva
+ * Copyright (C) 2018-2022 Guoquan Huang
+ * Copyright (C) 2018-2022 OpenVINS Contributors
  * Copyright (C) 2018-2019 Kevin Eckenhoff
  *
  * This program is free software: you can redistribute it and/or modify
@@ -25,8 +25,9 @@
 
 using namespace ov_init;
 
-Factor_ImageReprojCalib::Factor_ImageReprojCalib(const Eigen::Vector2d &uv_meas_, double pix_sigma_, bool is_fisheye_)
-    : uv_meas(uv_meas_), pix_sigma(pix_sigma_), is_fisheye(is_fisheye_) {
+Factor_ImageReprojCalib::Factor_ImageReprojCalib(const Eigen::Vector2d &uv_meas_, double pix_sigma_, std::shared_ptr<ov_core::CamBase> cam_used_)
+    : uv_meas(uv_meas_), pix_sigma(pix_sigma_), cam_used(cam_used_)
+{
 
   // Square root information inverse
   sqrtQ = Eigen::Matrix<double, 2, 2>::Identity();
@@ -43,7 +44,8 @@ Factor_ImageReprojCalib::Factor_ImageReprojCalib(const Eigen::Vector2d &uv_meas_
   mutable_parameter_block_sizes()->push_back(8); // focal, center, distortion
 }
 
-bool Factor_ImageReprojCalib::Evaluate(double const *const *parameters, double *residuals, double **jacobians) const {
+bool Factor_ImageReprojCalib::Evaluate(double const *const *parameters, double *residuals, double **jacobians) const
+{
 
   // Recover the current state from our parameters
   Eigen::Vector4d q_GtoIi = Eigen::Map<const Eigen::Vector4d>(parameters[0]);
@@ -62,8 +64,9 @@ bool Factor_ImageReprojCalib::Evaluate(double const *const *parameters, double *
   Eigen::Vector3d p_FinCi = R_ItoC * p_FinIi + p_IinC;
 
   // Normalized projected feature bearing
-  Eigen::Vector2d uv_norm;
-  uv_norm << p_FinCi(0) / p_FinCi(2), p_FinCi(1) / p_FinCi(2);
+  // Eigen::Vector3d uv_norm = p_FinCi;
+  // Eigen::Vector3d uv_norm;
+  // uv_norm << p_FinCi(0) / p_FinCi(2), p_FinCi(1) / p_FinCi(2),1.;
 
   // Square-root information and gate
   Eigen::Matrix<double, 2, 2> sqrtQ_gate = gate * sqrtQ;
@@ -71,23 +74,29 @@ bool Factor_ImageReprojCalib::Evaluate(double const *const *parameters, double *
   // Get the distorted raw image coordinate using the camera model
   // Also if jacobians are requested, then compute derivatives
   Eigen::Vector2d uv_dist;
-  Eigen::MatrixXd H_dz_dzn, H_dz_dzeta;
-  if (is_fisheye) {
-    ov_core::CamEqui cam(0, 0);
-    cam.set_value(camera_vals);
-    uv_dist = cam.distort_d(uv_norm);
-    if (jacobians) {
-      cam.compute_distort_jacobian(uv_norm, H_dz_dzn, H_dz_dzeta);
-      H_dz_dzn = sqrtQ_gate * H_dz_dzn;
-      H_dz_dzeta = sqrtQ_gate * H_dz_dzeta;
-    }
-  } else {
+  // Eigen::MatrixXd H_dz_dzn, H_dz_dzeta;
+  Eigen::MatrixXd H_dz_dpfc, H_dz_dzeta;
+
+  if (cam_used == nullptr)
+  {
     ov_core::CamRadtan cam(0, 0);
     cam.set_value(camera_vals);
-    uv_dist = cam.distort_d(uv_norm);
-    if (jacobians) {
-      cam.compute_distort_jacobian(uv_norm, H_dz_dzn, H_dz_dzeta);
-      H_dz_dzn = sqrtQ_gate * H_dz_dzn;
+
+    uv_dist = cam.distort_d(p_FinCi);
+    if (jacobians)
+    {
+      cam.compute_distort_jacobian(p_FinCi, H_dz_dpfc, H_dz_dzeta);
+      H_dz_dpfc = sqrtQ_gate * H_dz_dpfc;
+      H_dz_dzeta = sqrtQ_gate * H_dz_dzeta;
+    }
+  }
+  else
+  {
+    uv_dist = cam_used->distort_d(p_FinCi);
+    if (jacobians)
+    {
+      cam_used->compute_distort_jacobian(p_FinCi, H_dz_dpfc, H_dz_dzeta);
+      H_dz_dpfc = sqrtQ_gate * H_dz_dpfc;
       H_dz_dzeta = sqrtQ_gate * H_dz_dzeta;
     }
   }
@@ -103,47 +112,54 @@ bool Factor_ImageReprojCalib::Evaluate(double const *const *parameters, double *
   residuals[1] = res(1);
 
   // Compute jacobians if requested by ceres
-  if (jacobians) {
+  if (jacobians)
+  {
 
     // Normalized coordinates in respect to projection function
-    Eigen::MatrixXd H_dzn_dpfc = Eigen::MatrixXd::Zero(2, 3);
-    H_dzn_dpfc << 1.0 / p_FinCi(2), 0, -p_FinCi(0) / std::pow(p_FinCi(2), 2), 0, 1.0 / p_FinCi(2), -p_FinCi(1) / std::pow(p_FinCi(2), 2);
-    Eigen::MatrixXd H_dz_dpfc = H_dz_dzn * H_dzn_dpfc;
+    // Eigen::MatrixXd H_dzn_dpfc = Eigen::MatrixXd::Zero(2, 3);
+    // H_dzn_dpfc << 1.0 / p_FinCi(2), 0, -p_FinCi(0) / std::pow(p_FinCi(2), 2), 0, 1.0 / p_FinCi(2), -p_FinCi(1) / std::pow(p_FinCi(2), 2);
+    // Eigen::MatrixXd H_dz_dpfc = H_dz_dzn * H_dzn_dpfc;
 
     // Jacobian wrt q_GtoIi
-    if (jacobians[0]) {
+    if (jacobians[0])
+    {
       Eigen::Map<Eigen::Matrix<double, 2, 4, Eigen::RowMajor>> jacobian(jacobians[0]);
       jacobian.block(0, 0, 2, 3) = H_dz_dpfc * R_ItoC * ov_core::skew_x(p_FinIi);
       jacobian.block(0, 3, 2, 1).setZero();
     }
 
     // Jacobian wrt p_IiinG
-    if (jacobians[1]) {
+    if (jacobians[1])
+    {
       Eigen::Map<Eigen::Matrix<double, 2, 3, Eigen::RowMajor>> jacobian(jacobians[1]);
       jacobian.block(0, 0, 2, 3) = -H_dz_dpfc * R_ItoC * R_GtoIi;
     }
 
     // Jacobian wrt feature p_FinG
-    if (jacobians[2]) {
+    if (jacobians[2])
+    {
       Eigen::Map<Eigen::Matrix<double, 2, 3, Eigen::RowMajor>> jacobian(jacobians[2]);
       jacobian.block(0, 0, 2, 3) = H_dz_dpfc * R_ItoC * R_GtoIi;
     }
 
     // Jacbian wrt IMU-camera transform q_ItoC
-    if (jacobians[3]) {
+    if (jacobians[3])
+    {
       Eigen::Map<Eigen::Matrix<double, 2, 4, Eigen::RowMajor>> jacobian(jacobians[3]);
       jacobian.block(0, 0, 2, 3) = H_dz_dpfc * ov_core::skew_x(R_ItoC * p_FinIi);
       jacobian.block(0, 3, 2, 1).setZero();
     }
 
     // Jacbian wrt IMU-camera transform p_IinC
-    if (jacobians[4]) {
+    if (jacobians[4])
+    {
       Eigen::Map<Eigen::Matrix<double, 2, 3, Eigen::RowMajor>> jacobian(jacobians[4]);
       jacobian.block(0, 0, 2, 3) = H_dz_dpfc;
     }
 
     // Jacbian wrt camera intrinsic
-    if (jacobians[5]) {
+    if (jacobians[5])
+    {
       Eigen::Map<Eigen::Matrix<double, 2, 8, Eigen::RowMajor>> jacobian(jacobians[5]);
       jacobian.block(0, 0, 2, 8) = H_dz_dzeta;
     }
